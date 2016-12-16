@@ -1,0 +1,110 @@
+version: '2'
+services:
+  varnish:
+    image: meanbee/magento2-varnish:latest
+    ports:
+      - "8081:8081"
+      - "6082:6082"
+    depends_on:
+      - web
+    links:
+      - web
+    volumes:
+      - ./varnish/etc/varnish.vcl:/etc/varnish/default.vcl
+    environment:
+      - CACHE_SIZE=256M
+
+  cache:
+    image: redis:latest
+
+  web:
+    image: meanbee/magento2-nginx:1.9
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - fpm
+      - db
+      - cache
+    volumes_from:
+      - appdata
+    env_file:
+      - ./global.env
+    #environment:
+      #- VIRTUAL_HOST=m2ce.docker
+      #- VIRTUAL_PORT=80
+      #- HTTPS_METHOD=noredirect
+
+  fpm:
+    hostname: fpm.m2ce.docker
+    image: meanbee/magento2-php:7.0-fpm
+    ports:
+      - "9000"
+    links:
+      - db
+    volumes_from:
+      - appdata
+    env_file:
+      - ./global.env
+
+  db:
+    image: mysql:5.6
+    ports:
+      - "3306:3306"
+    volumes_from:
+      - dbdata
+    environment:
+      - MYSQL_ROOT_PASSWORD=magento2
+      - MYSQL_DATABASE=magento2
+      - MYSQL_USER=magento2
+      - MYSQL_PASSWORD=magento2
+      - TERM=meh
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    links:
+      - db:mysql
+    ports:
+      - "8080:80"
+    volumes:
+      - /sessions
+    environment:
+      - PMA_HOST=mysql
+
+  cli:
+    hostname: cli.m2ce.docker
+    image: meanbee/magento2-php:7.0-cli
+    links:
+      - db
+    volumes:
+      - ~/.composer/cache:/root/.composer/cache
+    volumes_from:
+      - appdata
+    env_file:
+      - ./global.env
+      - ./composer.env
+    environment:
+      - M2SETUP_INSTALL_DB=true
+      - M2SETUP_DB_HOST=db
+      - M2SETUP_DB_NAME=magento2
+      - M2SETUP_DB_USER=magento2
+      - M2SETUP_DB_PASSWORD=magento2
+      - M2SETUP_BASE_URL=http://m2ce.docker/
+      - M2SETUP_BACKEND_FRONTNAME=backend
+      - M2SETUP_ADMIN_FIRSTNAME=Admin
+      - M2SETUP_ADMIN_LASTNAME=User
+      - M2SETUP_ADMIN_EMAIL=dummy@gmail.com
+      - M2SETUP_ADMIN_USER=admin
+      - M2SETUP_ADMIN_PASSWORD=123123q
+      - M2SETUP_VERSION=2.1.*
+      # - M2SETUP_USE_SAMPLE_DATA=true
+
+  appdata:
+    image: tianon/true
+    volumes:
+      - ./magento:/var/www/magento
+
+  dbdata:
+    image: tianon/true
+    volumes:
+      - /var/lib/mysql
