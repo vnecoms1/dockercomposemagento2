@@ -1,5 +1,13 @@
 Based on Meanbee group
 
+# Current done
+
+ Redis
+ Varnish
+ PHP7
+ Mysql5.6
+ Nginx1.9 
+
 # Magento 2 Docker
 
 A collection of Docker images for running Magento 2 through nginx and on the command line.
